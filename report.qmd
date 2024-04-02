@@ -1,0 +1,81 @@
+---
+title: "First Map V1.0"
+subtitle: "GLOBAL OVERVIEW OF POSTNATAL CARE FOR NEWBORNS"
+author: "Olha Volodko"
+date: "2024-04-01"
+format: 
+  html:
+    theme: sandstone
+    toc: true
+  
+execute:
+  echo: false
+  warning: false
+  message: false
+  
+
+---
+
+```{r}
+#| labal: setup
+#| include: false
+
+# libraries
+library(tidyverse)
+library(rnaturalearth)
+library(sf)
+library(readr)
+library(scales)
+library(plotly)
+library("gridExtra")
+
+# data
+unicef_metadata <- read_csv("unicef_metadata.csv") 
+unicef_indicator_2 <- read_csv("unicef_indicator_2.csv") 
+
+# transformations
+merged_data <- unicef_metadata %>%
+  inner_join(unicef_indicator_2, by = c("country", "year" = "time_period"))
+```
+#INTRODUCTION:
+
+
+The comprehensive study covers <span style="color: red; font-weight: bold;">109 countries</span>, delving into the intricate web of factors influencing postpartum care. Key indicators such as GDP, education spending, and health expenditure are scrutinized, providing insights into their perceived impact on postnatal care. This narrative unfolds the global landscape of postnatal care for newborns, leveraging data spanning from 2010 to 2022.
+
+```{r}
+#| fig-cap: GLOBAL OVERVIEW OF POSTNATAL CARE FOR NEWBORNSGLOBAL OVERVIEW OF POSTNATAL CARE FOR NEWBORNSGLOBAL OVERVIEW OF POSTNATAL CARE FOR NEWBORNSGLOBAL OVERVIEW OF POSTNATAL CARE FOR NEWBORNS
+#| 
+# Load data
+unicef_indicator_2 <- read_csv("unicef_indicator_2.csv") 
+
+# Calculation of the average post-natal care rate
+average_care <- unicef_indicator_2 %>%
+  group_by(alpha_3_code) %>%
+  summarise(avg_postnatal_care = mean(obs_value, na.rm = TRUE))
+
+# Load map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Merging of average postpartum care data into world map data
+world_with_data <- left_join(world, average_care, by = c("iso_a3" = "alpha_3_code"))
+
+# Add a custom text column to the dataframe for plotly's mouseover text
+world_with_data <- world_with_data %>%
+  mutate(hover_text = sprintf("Country: %s\nAvg Postnatal Care: %.2f%%", name, avg_postnatal_care))
+
+# Creating ggplot plots, referencing custom text
+m <- ggplot(data = world_with_data) +
+  geom_sf(aes(fill = avg_postnatal_care, text = hover_text)) + # Use text aesthetic to reference hover_text
+  scale_fill_gradient(low = "#FFCCCC", high = "#E15252", name = "Avg Postnatal Care (%)") +
+  labs(title = "Average Postnatal Care Percentage by Country",
+       subtitle = "Percentage of newborns receiving postnatal care") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Converts ggplot plots to interactive plotly plots, specifying the use of custom mouse hover text
+interactive_m <- ggplotly(m, tooltip = "text")
+
+# Displaying Interactive Charts
+interactive_m
+```
+
